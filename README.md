@@ -76,3 +76,20 @@ The configuration can be given from different ways:
 	2. add a test in `./tests` for the new feature you propose
 	3. implement your feature
 	4. run pytest: `pipenv run pytest -vv -x`
+
+## Run it with Redis and elasticsearch
+
+You can run it with both **Redis** and **elasticsearch** using **docker**. First, edit the `docker-compose.yml` file to add a link to your **elasticsearch** instance (for example: `https://somewhere.lost/`) in `IDUNN_MIMIR_ES`.
+
+Then you just need to run:
+
+```bash
+$ docker-compose up --build
+```
+
+If you need to clean the **Redis** cache, run:
+
+```bash
+$ docker-compose kill
+$ docker image prune --filter "label=idunn_idunn"
+```
