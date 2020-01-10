@@ -44,7 +44,7 @@ def get_api_urls(settings):
             get_directions,
             response_model=DirectionsResponse,
             responses={
-                400: {'description': 'Requested Path Not Allowed.'},
+                422: {'description': 'Requested Path Not Allowed.'},
             }
         )
     ]
