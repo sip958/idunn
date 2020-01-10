@@ -129,7 +129,7 @@ class DirectionsClient:
         response.raise_for_status()
         return DirectionsResponse(status="success", data=response.json())
 
-    def get_directions(self, from_loc, to_loc, mode, lang):
+    def get_directions(self, from_loc, to_loc, mode, lang) -> DirectionsResponse:
         method = self.directions_qwant
         if self.MAPBOX_API_ENABLED:
             method = self.directions_mapbox
@@ -149,17 +149,14 @@ class DirectionsClient:
             )
 
         method_name = method.__name__
-        logger.info(
-            f"Calling directions API '{method_name}'",
-            extra={
-                "method": method_name,
-                "mode": mode,
-                "lang": lang,
-                "from": from_loc,
-                "to": to_loc,
-            },
-        )
-        return method(from_loc, to_loc, mode, lang).dict(by_alias=True)
+        logger.info(f"Calling directions API '{method_name}'", extra={
+            "method": method_name,
+            "mode": mode,
+            "lang": lang,
+            "from": from_loc,
+            "to": to_loc,
+        })
+        return method(from_loc, to_loc, mode, lang)
 
 
 directions_client = DirectionsClient()

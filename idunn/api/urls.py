@@ -5,6 +5,7 @@ from .places_list import get_places_bbox, get_events_bbox
 from .categories import get_all_categories
 from .closest import closest_address
 from .directions import get_directions
+from ..directions.models import DirectionsResponse
 from ..utils.prometheus import (
     expose_metrics,
     expose_metrics_multiprocess,
@@ -18,6 +19,7 @@ def get_metric_handler(settings):
         return expose_metrics_multiprocess
     return expose_metrics
 
+from fastapi import HTTPException
 
 def get_api_urls(settings):
     """Defines all endpoints
@@ -38,5 +40,11 @@ def get_api_urls(settings):
         # Kuzzle events
         APIRoute("/events", get_events_bbox),
         # Directions
-        APIRoute("/directions/{f_lon},{f_lat};{t_lon},{t_lat}", get_directions),
+        APIRoute('/directions/{f_lon},{f_lat};{t_lon},{t_lat}',
+            get_directions,
+            response_model=DirectionsResponse,
+            responses={
+                400: {'description': 'Requested Path Not Allowed.'},
+            }
+        )
     ]
