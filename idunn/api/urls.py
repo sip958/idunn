@@ -19,7 +19,9 @@ def get_metric_handler(settings):
         return expose_metrics_multiprocess
     return expose_metrics
 
+
 from fastapi import HTTPException
+
 
 def get_api_urls(settings):
     """Defines all endpoints
@@ -40,11 +42,10 @@ def get_api_urls(settings):
         # Kuzzle events
         APIRoute("/events", get_events_bbox),
         # Directions
-        APIRoute('/directions/{f_lon},{f_lat};{t_lon},{t_lat}',
+        APIRoute(
+            "/directions/{f_lon},{f_lat};{t_lon},{t_lat}",
             get_directions,
             response_model=DirectionsResponse,
-            responses={
-                422: {'description': 'Requested Path Not Allowed.'},
-            }
-        )
+            responses={422: {"description": "Requested Path Not Allowed."},},
+        ),
     ]
