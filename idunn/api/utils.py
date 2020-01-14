@@ -22,6 +22,7 @@ from idunn.blocks import (
     WikiUndefinedException,
 )
 from idunn.utils import prometheus
+from idunn.utils.index_names import INDICES
 import phonenumbers
 
 logger = logging.getLogger(__name__)
@@ -196,7 +197,7 @@ def fetch_bbox_places(es, indices, raw_filters, bbox, max_size) -> list:
     return bbox_places
 
 
-def fetch_es_place(id, es, indices, type) -> dict:
+def fetch_es_place(id, es, type) -> dict:
     """Returns the raw Place data
 
     This function gets from Elasticsearch the
@@ -204,10 +205,10 @@ def fetch_es_place(id, es, indices, type) -> dict:
     """
     if type is None:
         index_name = PLACE_DEFAULT_INDEX
-    elif type not in indices:
+    elif type not in INDICES:
         raise HTTPException(status_code=400, detail=f"Wrong type parameter: type={type}")
     else:
-        index_name = indices.get(type)
+        index_name = INDICES.get(type)
 
     try:
         es_places = es.search(index=index_name, body={"filter": {"term": {"_id": id}}})
@@ -217,7 +218,11 @@ def fetch_es_place(id, es, indices, type) -> dict:
 
     es_place = es_places.get("hits", {}).get("hits", [])
     if len(es_place) == 0:
-        raise HTTPException(status_code=404, detail=f"place {id} not found with type={type}")
+        if type is None:
+            message = f"place '{id}' not found"
+        else:
+            message = f"place '{id}' not found with type={type}"
+        raise HTTPException(status_code=404, detail=message)
     if len(es_place) > 1:
         logger.warning("Got multiple places with id %s", id)
 

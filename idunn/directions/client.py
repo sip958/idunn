@@ -50,8 +50,11 @@ class DirectionsClient:
         if extra is None:
             extra = {}
 
-        start_lon, start_lat = start
-        end_lon, end_lat = end
+        start_coord = start.get_coord()
+        start_lon, start_lat = start_coord["lon"], start_coord["lat"]
+        end_coord = end.get_coord()
+        end_lon, end_lat = end_coord["lon"], end_coord["lat"]
+
         base_url = settings["MAPBOX_DIRECTIONS_API_BASE_URL"]
         response = self.session.get(
             f"{base_url}/{mode}/{start_lon},{start_lat};{end_lon},{end_lat}",
@@ -70,20 +73,22 @@ class DirectionsClient:
                 response.status_code,
                 response.text,
             )
-            return JSONResponse(content=response.json(), status_code=response.status_code,)
+            return JSONResponse(content=response.json(), status_code=response.status_code)
         response.raise_for_status()
         return DirectionsResponse(status="success", data=response.json())
 
     def directions_qwant(self, start, end, mode, lang, extra=None):
         if not self.QWANT_BASE_URL:
             raise HTTPException(
-                status_code=501, detail=f"Directions API is currently unavailable for mode {mode}",
+                status_code=501, detail=f"Directions API is currently unavailable for mode {mode}"
             )
 
         if extra is None:
             extra = {}
-        start_lon, start_lat = start
-        end_lon, end_lat = end
+        start_coord = start.get_coord()
+        start_lon, start_lat = start_coord["lon"], start_coord["lat"]
+        end_coord = end.get_coord()
+        end_lon, end_lat = end_coord["lon"], end_coord["lat"]
 
         response = self.session.get(
             f"{self.QWANT_BASE_URL}/{start_lon},{start_lat};{end_lon},{end_lat}",
@@ -97,18 +102,31 @@ class DirectionsClient:
 
         if 400 <= response.status_code < 500:
             # Proxy client errors
-            return JSONResponse(content=response.json(), status_code=response.status_code,)
+            return JSONResponse(content=response.json(), status_code=response.status_code)
         response.raise_for_status()
         return DirectionsResponse(**response.json())
+
+    def place_to_combigo_location(self, place):
+        location = {"lat": place.get_coord()["lat"], "lng": place.get_coord()["lon"]}
+
+        name = ""
+        if place.PLACE_TYPE != "latlon":
+            name = place.get_name()
+        if name:
+            location["name"] = name
+
+        if place.PLACE_TYPE == "admin":
+            location["type"] = "city"
+        elif place.get_class_name() == "railway":
+            location["type"] = "publictransport"
+
+        return location
 
     def directions_combigo(self, start, end, mode, lang):
         if not self.COMBIGO_BASE_URL:
             raise HTTPException(
-                status_code=501, detail=f"Directions API is currently unavailable for mode {mode}",
+                status_code=501, detail=f"Directions API is currently unavailable for mode {mode}"
             )
-
-        start_lon, start_lat = start
-        end_lon, end_lat = end
 
         if "_" in lang:
             # Combigo does not handle long locale format
@@ -119,11 +137,11 @@ class DirectionsClient:
 
         response = self.combigo_session.post(
             f"{self.COMBIGO_BASE_URL}/journey",
-            params={"lang": lang,},
+            params={"lang": lang},
             json={
                 "locations": [
-                    {"lat": start_lat, "lng": start_lon},
-                    {"lat": end_lat, "lng": end_lon},
+                    self.place_to_combigo_location(start),
+                    self.place_to_combigo_location(end),
                 ],
                 "type_include": mode,
                 "dTime": (datetime.utcnow() + timedelta(minutes=1)).isoformat(timespec="seconds"),
@@ -133,7 +151,7 @@ class DirectionsClient:
         response.raise_for_status()
         return DirectionsResponse(status="success", data=response.json())
 
-    def get_directions(self, from_loc, to_loc, mode, lang, params: QueryParams):
+    def get_directions(self, from_place, to_place, mode, lang, params: QueryParams):
         method = self.directions_qwant
         kwargs = {"extra": params}
         if self.MAPBOX_API_ENABLED:
@@ -150,9 +168,7 @@ class DirectionsClient:
             kwargs = {}
             mode = mode
         else:
-            raise HTTPException(
-                status_code=400, detail=f"unknown mode {mode}",
-            )
+            raise HTTPException(status_code=400, detail=f"unknown mode {mode}")
 
         method_name = method.__name__
         logger.info(
@@ -161,11 +177,11 @@ class DirectionsClient:
                 "method": method_name,
                 "mode": mode,
                 "lang": lang,
-                "from": from_loc,
-                "to": to_loc,
+                "from_place": from_place.get_id(),
+                "to_place": to_place.get_id(),
             },
         )
-        return method(from_loc, to_loc, mode, lang, **kwargs).dict(by_alias=True)
+        return method(from_place, to_place, mode, lang, **kwargs).dict(by_alias=True)
 
 
 directions_client = DirectionsClient()
