@@ -45,7 +45,7 @@ class DirectionsClient:
                     city_surrounds_polygons[city].contains(point)
                     for point in [Point(*from_loc), Point(*to_loc)]
                 )
-                for city in settings["PUBLIC_TRANSPORTS_ALLOWED_CITIES"]
+                for city in settings["PUBLIC_TRANSPORTS_ALLOWED_CITIES"].split(",")
             )
 
         return True
